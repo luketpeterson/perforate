@@ -81,3 +81,19 @@ fn boxed_test() {
     assert_eq!(original_box.two, vec![42]);
     assert_eq!(original_box.one, "one");
 }
+
+#[derive(Perforate)]
+#[repr(C)]
+pub struct GenericTest<T> {
+    vec: Vec<T>,
+    #[perforate]
+    payload: u64,
+    phantom: std::marker::PhantomData<T>,
+}
+
+#[test]
+fn generics_test() {
+
+    let new_test = GenericTest::<usize>{vec: vec![], payload: 42, phantom: std::marker::PhantomData};
+    let (_perforated, _payload) = new_test.perforate_payload();
+}

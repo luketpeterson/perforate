@@ -1,11 +1,11 @@
 [package]
 name = "perforate"
-version = "0.1.4"
+version = "0.1.0"
 edition = "2021"
 authors = ["Luke Peterson <luketpeterson@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "A macro to generate variants of a struct to allow splitting fields for extended periods of time"
-repository = "https://github.com/luketpeterson/summum-types"
+repository = "https://github.com/luketpeterson/perforate"
 readme = "README.md"
 keywords = ["macro", "hole", "structure"]
 categories = ["rust-patterns", "algorithms", "data-structures", ]
@@ -16,6 +16,6 @@ proc-macro = true
 [dependencies]
 quote = "1.0.33"
 proc-macro2 = { version = "1.0.79" }
-syn = { version = "2.0.52", features = ["full", "extra-traits"] } #extra-traits GOAT, disable
+syn = { version = "2.0.52", features = ["full"] }
 heck = "0.4.1"
 

@@ -1,4 +1,4 @@
-
+#![doc = include_str!("../README.md")]
 
 use quote::{quote, quote_spanned};
 use proc_macro2::{TokenTree, Span};
@@ -63,7 +63,7 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
             perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
                 #[inline(always)]
                 pub fn #perf_func_ident(self) -> (#new_struct_name #type_generics, #taken_type) {
-                    let perf_struct: #new_struct_name = unsafe { core::mem::transmute(self) };
+                    let perf_struct: #new_struct_name #type_generics = unsafe { core::mem::transmute(self) };
                     let taken_val: #taken_type = unsafe { core::mem::transmute(perf_struct.__perforation) };
                     (perf_struct, taken_val)
                 }
@@ -73,8 +73,9 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
             perforated_struct_impls.push(quote_spanned!{variant_ident.span()=>
                 impl #impl_generics #new_struct_name #type_generics #where_clause {
                     #[inline(always)]
-                    pub fn replace_perf(mut self, taken_val: #taken_type) -> #item_ident {
+                    pub fn replace_perf(mut self, taken_val: #taken_type) -> #item_ident #type_generics {
                         unsafe{ core::ptr::copy_nonoverlapping::<u8>( core::ptr::from_ref(&taken_val).cast(), self.__perforation.as_mut_ptr().cast(), core::mem::size_of::<#taken_type>() ); }
+                        #[allow(forgetting_copy_types)]
                         core::mem::forget(taken_val);
                         unsafe{ core::mem::transmute(self) }
                     }
@@ -86,7 +87,7 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
             perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
                 #[inline(always)]
                 pub fn #perf_func_ident(the_box: Box<Self>) -> (Box< #new_struct_name #type_generics >, #taken_type) {
-                    let perf_struct: Box< #new_struct_name > = unsafe { core::mem::transmute(the_box) };
+                    let perf_struct: Box< #new_struct_name #type_generics > = unsafe { core::mem::transmute(the_box) };
                     let taken_val: #taken_type = unsafe { core::mem::transmute(perf_struct.__perforation) };
                     (perf_struct, taken_val)
                 }
@@ -98,6 +99,7 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
                 #[inline(always)]
                 pub fn #perf_func_ident(mut the_box: Box< #new_struct_name #type_generics >, taken_val: #taken_type) -> Box< Self > {
                     unsafe{ core::ptr::copy_nonoverlapping::<u8>( core::ptr::from_ref(&taken_val).cast(), the_box.__perforation.as_mut_ptr().cast(), core::mem::size_of::<#taken_type>() ); }
+                    #[allow(forgetting_copy_types)]
                     core::mem::forget(taken_val);
                     unsafe{ core::mem::transmute(the_box) }
                 }
