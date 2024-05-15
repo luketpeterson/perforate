@@ -12,7 +12,6 @@ pub struct TestStruct {
     #[perforate]
     two: Vec<usize>,
     three: u64,
-    four: [u64; 2048],
 }
 
 
@@ -26,34 +25,10 @@ pub struct TestStruct {
 // }
 
 
-
-//GOAT WTF Test
-impl TestStruct {
-    pub fn perforate_onezz(self) -> (TestStruct, String) {
-        // (unsafe{ core::mem::transmute(self) }, "one".to_string())
-        (self, "one".to_string())
-    }
-
-    pub fn perforate_oneaa(self) -> Self {
-        self
-    }
-
-}
-
-
 #[test]
 fn perforate_test() {
 
-    // println!("GOAT {} {}", core::mem::size_of::<TestStruct>(), core::mem::size_of::<TestStructPerfOne>());
-    // println!("GOAT {} {}", core::mem::offset_of!(TestStruct, one), core::mem::offset_of!(TestStructPerfOne, __perforation));
-
-    let new_test = TestStruct{one: "one".to_string(), two: vec![42], three: 42, four: [0; 2048]};
-
-//WTF!!  GOAT
-// println!("GOAT test {:p}", core::ptr::addr_of!(new_test));
-//     let perforated = new_test.perforate_oneaa();
-// println!("GOAT perf {:p}", core::ptr::addr_of!(perforated));
-
+    let new_test = TestStruct{one: "one".to_string(), two: vec![42], three: 42};
 
     let (perforated, one) = new_test.perforate_one();
     assert_eq!(size_of::<TestStruct>(), size_of_val(&perforated));
@@ -65,5 +40,44 @@ fn perforate_test() {
     assert_eq!(original.three, 42);
     assert_eq!(original.two, vec![42]);
     assert_eq!(original.one, "one");
+}
 
+#[derive(Perforate)]
+#[repr(C)]
+pub struct DropTest {
+    #[perforate]
+    bomb: DropBomb,
+    payload: u64,
+}
+
+#[test]
+fn drop_test() {
+    let new_test = DropTest{ bomb: DropBomb, payload: 42 };
+    let (_perforated, bomb) = new_test.perforate_bomb();
+    core::mem::forget(bomb);
+}
+
+pub struct DropBomb;
+
+impl Drop for DropBomb {
+    fn drop(&mut self) {
+        panic!("Don't drop bombs!")
+    }
+}
+
+
+#[test]
+fn boxed_test() {
+
+    let new_box = Box::new(TestStruct{one: "one".to_string(), two: vec![42], three: 42});
+
+    let (perforated_box, one) = TestStruct::boxed_perforate_one(new_box);
+    assert_eq!(perforated_box.three, 42);
+    assert_eq!(perforated_box.two, vec![42]);
+    assert_eq!(one, "one");
+
+    let original_box = TestStruct::boxed_replace_one(perforated_box, one);
+    assert_eq!(original_box.three, 42);
+    assert_eq!(original_box.two, vec![42]);
+    assert_eq!(original_box.one, "one");
 }

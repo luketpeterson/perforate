@@ -61,6 +61,7 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
             let taken_type = taken_type.unwrap();
             let perf_func_ident = Ident::new(&format!("perforate_{}", variant_ident.to_string()), variant_ident.span());
             perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
+                #[inline(always)]
                 pub fn #perf_func_ident(self) -> (#new_struct_name #type_generics, #taken_type) {
                     let perf_struct: #new_struct_name = unsafe { core::mem::transmute(self) };
                     let taken_val: #taken_type = unsafe { core::mem::transmute(perf_struct.__perforation) };
@@ -71,11 +72,34 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
             //Compose the impls to put the field back
             perforated_struct_impls.push(quote_spanned!{variant_ident.span()=>
                 impl #impl_generics #new_struct_name #type_generics #where_clause {
+                    #[inline(always)]
                     pub fn replace_perf(mut self, taken_val: #taken_type) -> #item_ident {
                         unsafe{ core::ptr::copy_nonoverlapping::<u8>( core::ptr::from_ref(&taken_val).cast(), self.__perforation.as_mut_ptr().cast(), core::mem::size_of::<#taken_type>() ); }
                         core::mem::forget(taken_val);
                         unsafe{ core::mem::transmute(self) }
                     }
+                }
+            });
+
+            //Compose the methods to take the field from a boxed type
+            let perf_func_ident = Ident::new(&format!("boxed_perforate_{}", variant_ident.to_string()), variant_ident.span());
+            perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
+                #[inline(always)]
+                pub fn #perf_func_ident(the_box: Box<Self>) -> (Box< #new_struct_name #type_generics >, #taken_type) {
+                    let perf_struct: Box< #new_struct_name > = unsafe { core::mem::transmute(the_box) };
+                    let taken_val: #taken_type = unsafe { core::mem::transmute(perf_struct.__perforation) };
+                    (perf_struct, taken_val)
+                }
+            });
+
+            //Compose the impls to put the field back inside the box
+            let perf_func_ident = Ident::new(&format!("boxed_replace_{}", variant_ident.to_string()), variant_ident.span());
+            perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
+                #[inline(always)]
+                pub fn #perf_func_ident(mut the_box: Box< #new_struct_name #type_generics >, taken_val: #taken_type) -> Box< Self > {
+                    unsafe{ core::ptr::copy_nonoverlapping::<u8>( core::ptr::from_ref(&taken_val).cast(), the_box.__perforation.as_mut_ptr().cast(), core::mem::size_of::<#taken_type>() ); }
+                    core::mem::forget(taken_val);
+                    unsafe{ core::mem::transmute(the_box) }
                 }
             });
         }
