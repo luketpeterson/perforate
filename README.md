@@ -47,17 +47,17 @@ pub struct TestStruct {
 
 let test_struct = Box::new(TestStruct{one: "one".to_string(), two: 42});
 
-let (perforated_box, one) = TestStruct::boxed_perforate_one(test_struct);
+let (perforated_box, one) = TestStruct::perforate_box_one(test_struct);
 assert_eq!(perforated_box.two, 42);
 assert_eq!(one, "one");
 
-let original_box = TestStruct::boxed_replace_one(perforated_box, one);
+let original_box = TestStruct::replace_box_one(perforated_box, one);
 assert_eq!(original_box.two, 42);
 assert_eq!(original_box.one, "one");
 ```
 
 ## Caveats
 
-If a struct has generic parameters or lifetimes that are used only by a field marked with the `#[perforate]` attribute, you must add a [PhantomData](https://doc.rust-lang.org/std/marker/struct.PhantomData.html) to your struct to prevent compile errors.  In addition, you cannot perforate a field with a generic type parameter on `stable` until [the issue](https://github.com/rust-lang/rust/issues/76560) is merged.
+If a struct has generic parameters or lifetimes that are used only by a field marked with the `#[perforate]` attribute, you must add a [PhantomData](https://doc.rust-lang.org/std/marker/struct.PhantomData.html) to your struct to prevent compile errors.  In addition, you cannot perforate a *field* with a generic type parameter on `stable` until [the issue](https://github.com/rust-lang/rust/issues/76560) is merged.
 
 You may access the other "unperforated" fields of the perforated struct, however the perforated version of the struct is a new type and does not have any of the trait implementations from its progenitor.  This includes a custom [Drop](https://doc.rust-lang.org/std/ops/trait.Drop.html) trait.  So if your struct needs special cleanup behavior you must reassemble it before dropping.

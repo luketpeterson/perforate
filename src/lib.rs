@@ -56,9 +56,20 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
                 }
             })?;
             perforated_structs.push(derive_input_from_struct(new_struct_name.clone(), new_perforated_struct, &item));
-
-            //Compose the methods to take the field
             let taken_type = taken_type.unwrap();
+
+            //Compose the methods to take the field from an &mut
+            let perf_func_ident = Ident::new(&format!("perforate_mut_{}", variant_ident.to_string()), variant_ident.span());
+            perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
+                #[inline(always)]
+                pub fn #perf_func_ident<'a>(&'a mut self) -> (&'a mut #new_struct_name #type_generics, &'a mut #taken_type) {
+                    let perf_struct_ref: &mut #new_struct_name #type_generics = unsafe { core::mem::transmute(self) };
+                    let taken_ref: &mut #taken_type = unsafe { core::mem::transmute(&mut perf_struct_ref.__perforation) };
+                    (perf_struct_ref, taken_ref)
+                }
+            });
+
+            //Compose the methods to take the field from an owned struct
             let perf_func_ident = Ident::new(&format!("perforate_{}", variant_ident.to_string()), variant_ident.span());
             perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
                 #[inline(always)]
@@ -83,7 +94,7 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
             });
 
             //Compose the methods to take the field from a boxed type
-            let perf_func_ident = Ident::new(&format!("boxed_perforate_{}", variant_ident.to_string()), variant_ident.span());
+            let perf_func_ident = Ident::new(&format!("perforate_box_{}", variant_ident.to_string()), variant_ident.span());
             perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
                 #[inline(always)]
                 pub fn #perf_func_ident(the_box: Box<Self>) -> (Box< #new_struct_name #type_generics >, #taken_type) {
@@ -94,7 +105,7 @@ fn perforate_impl(item: DeriveInput) -> Result<proc_macro::TokenStream> {
             });
 
             //Compose the impls to put the field back inside the box
-            let perf_func_ident = Ident::new(&format!("boxed_replace_{}", variant_ident.to_string()), variant_ident.span());
+            let perf_func_ident = Ident::new(&format!("replace_box_{}", variant_ident.to_string()), variant_ident.span());
             perforate_impl_members.push(quote_spanned!{variant_ident.span()=>
                 #[inline(always)]
                 pub fn #perf_func_ident(mut the_box: Box< #new_struct_name #type_generics >, taken_val: #taken_type) -> Box< Self > {

@@ -26,7 +26,7 @@ pub struct TestStruct {
 
 
 #[test]
-fn perforate_test() {
+fn perforate_owned_test() {
 
     let new_test = TestStruct{one: "one".to_string(), two: vec![42], three: 42};
 
@@ -40,6 +40,22 @@ fn perforate_test() {
     assert_eq!(original.three, 42);
     assert_eq!(original.two, vec![42]);
     assert_eq!(original.one, "one");
+}
+
+#[test]
+fn perforate_mut_test() {
+
+    let mut new_test = TestStruct{one: "one".to_string(), two: vec![42], three: 42};
+
+    let (perforated, one) = new_test.perforate_mut_one();
+    assert_eq!(perforated.three, 42);
+    assert_eq!(perforated.two, vec![42]);
+    assert_eq!(one, "one");
+
+    *one = "new_one".to_string();
+
+    // This is where `one` and `perforated` are dropped, ending the borrow of `new_test`
+    assert_eq!(new_test.one, "new_one");
 }
 
 #[derive(Perforate)]
@@ -71,12 +87,12 @@ fn boxed_test() {
 
     let new_box = Box::new(TestStruct{one: "one".to_string(), two: vec![42], three: 42});
 
-    let (perforated_box, one) = TestStruct::boxed_perforate_one(new_box);
+    let (perforated_box, one) = TestStruct::perforate_box_one(new_box);
     assert_eq!(perforated_box.three, 42);
     assert_eq!(perforated_box.two, vec![42]);
     assert_eq!(one, "one");
 
-    let original_box = TestStruct::boxed_replace_one(perforated_box, one);
+    let original_box = TestStruct::replace_box_one(perforated_box, one);
     assert_eq!(original_box.three, 42);
     assert_eq!(original_box.two, vec![42]);
     assert_eq!(original_box.one, "one");
